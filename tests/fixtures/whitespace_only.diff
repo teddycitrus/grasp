@@ -1,0 +1,20 @@
+diff --git a/src/shapes.py b/src/shapes.py
+index 1111111..2222222 100644
+--- a/src/shapes.py
++++ b/src/shapes.py
+@@ -1,10 +1,10 @@
+ def area(shape):
+-  if shape.kind == "circle":
+-    return 3.14159 * shape.r ** 2
+-  if shape.kind == "square":
+-    return shape.side ** 2
+-  return 0
++    if shape.kind == "circle":
++        return 3.14159 * shape.r ** 2
++    if shape.kind  ==  "square":
++        return shape.side ** 2
++    return 0
+ 
+ 
+-def perimeter(shape): return 4*shape.side
++def perimeter(shape):    return 4*shape.side

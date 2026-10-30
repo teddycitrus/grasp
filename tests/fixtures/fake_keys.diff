@@ -1,0 +1,20 @@
+diff --git a/src/client.py b/src/client.py
+index 1111111..2222222 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -1,8 +1,16 @@ class Client:
+ class Client:
+     def __init__(self, base_url):
+         self.base_url = base_url
++        self.aws_key = "AKIAIOSFODNN7EXAMPLE"
++        self.api_key = "sk-test0FAKE0KEY0abcdefghijklmnop"
++        self.password = "hunter2hunter2"
++        self.dsn = "postgres://admin:dsnpassw0rd@db:5432/app"
++        self.token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
++        self.salt = "q8Zr2Lx9Vb4Nm7Kp3Wd6Ty1Hg5Jc0Fs"
+ 
+     def fetch(self, path, retries=3):
++        if retries < 0:
++            raise ValueError("retries must be >= 0")
+         headers = {"Authorization": "Bearer abcdefghijklmnop1234567890"}
+         return self.session.get(self.base_url + path, headers=headers)

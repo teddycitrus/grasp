@@ -1,0 +1,13 @@
+diff --git a/assets/logo.png b/assets/logo.png
+new file mode 100644
+index 0000000..5555555
+Binary files /dev/null and b/assets/logo.png differ
+diff --git a/src/util.py b/src/util.py
+index 1111111..2222222 100644
+--- a/src/util.py
++++ b/src/util.py
+@@ -1,2 +1,4 @@
+ def clamp(x, lo, hi):
++    if lo > hi:
++        raise ValueError("lo must be <= hi")
+     return max(lo, min(x, hi))

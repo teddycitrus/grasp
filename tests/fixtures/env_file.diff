@@ -1,0 +1,23 @@
+diff --git a/.env b/.env
+new file mode 100644
+index 0000000..6666666
+--- /dev/null
++++ b/.env
+@@ -0,0 +1,2 @@
++DATABASE_URL=postgres://admin:envfilepass99@db:5432/app
++STRIPE_KEY=rk_live_envfilesecretvalue123
+diff --git a/config/prod.env b/config/prod.env
+new file mode 100644
+index 0000000..7777777
+--- /dev/null
++++ b/config/prod.env
+@@ -0,0 +1 @@
++SESSION_SECRET=prodenvsecretvalue456
+diff --git a/src/db.py b/src/db.py
+index 1111111..2222222 100644
+--- a/src/db.py
++++ b/src/db.py
+@@ -1,2 +1,3 @@
+ def connect(url):
++    url = url.strip()
+     return open_pool(url)

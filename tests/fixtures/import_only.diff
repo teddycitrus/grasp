@@ -1,0 +1,28 @@
+diff --git a/src/service.py b/src/service.py
+index 1111111..2222222 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -1,4 +1,12 @@
+-import os
++import os.path
++import sys
++import json
++from collections import OrderedDict, defaultdict
++from typing import (
++    Any,
++    Optional,
++)
+ 
+ 
+ def run():
+diff --git a/web/index.ts b/web/index.ts
+index 3333333..4444444 100644
+--- a/web/index.ts
++++ b/web/index.ts
+@@ -1,2 +1,5 @@
+ import { a } from "./a";
++import { b } from "./b";
++import type { C } from "./c";
++const fs = require("fs");
++export { d } from "./d";
+ a();

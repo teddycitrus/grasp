@@ -1,0 +1,30 @@
+diff --git a/src/orders.py b/src/orders.py
+index 1111111..2222222 100644
+--- a/src/orders.py
++++ b/src/orders.py
+@@ -1,6 +1,22 @@
+ import math
++import logging
+ 
+ 
+-def total(order):
+-    return sum(item.price for item in order.items)
++def total(order, tax_rate=0.0, coupon=None):
++    # Sum line items, then apply coupon and tax.
++    subtotal = 0
++    for item in order.items:
++        item.validate()
++        if item.quantity <= 0:
++            continue
++        subtotal += item.price * item.quantity
++    if coupon is not None:
++        if coupon.expired:
++            raise ValueError("coupon expired")
++        subtotal -= min(coupon.amount, subtotal)
++    tax = subtotal * tax_rate
++    result = subtotal + tax
++    if result < 0:
++        result = 0
++    rounded = math.floor(result * 100) / 100
++    logging.debug("total %s", rounded)
++    return rounded
