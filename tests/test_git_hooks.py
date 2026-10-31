@@ -34,6 +34,7 @@ def installed(repo):
     config.save(c)
     commit_file(repo, "app.py", "def f(x):\n    return x\n")
     stage_file(repo, "app.py", "def f(x, y=0):\n    if x is None:\n        return y\n    return x + y\n")
+    config.log_path().unlink(missing_ok=True)  # a grasp on PATH logs the setup commit's --no-verify
     return repo
 
 

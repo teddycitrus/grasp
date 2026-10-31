@@ -20,6 +20,7 @@ def isolated(tmp_path, monkeypatch):
     gitconfig.write_text("")
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(gitconfig))
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))  # never find a repo above the test dir
     for k, v in {"GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "t@example.com", "GIT_COMMITTER_NAME": "Test",
                  "GIT_COMMITTER_EMAIL": "t@example.com"}.items():
         monkeypatch.setenv(k, v)
