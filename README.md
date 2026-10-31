@@ -93,7 +93,7 @@ Answer (finish with an empty line; type "idk" if unsure):
 >
 ```
 
-Every question passes a programmatic gate before you see it: it must name an identifier that appears in the diff, must not match a list of generic phrases ("what does this change do", "why did you make this change", Big-O, other files, line numbers), must not just ask what something is or does, must not contain its own answer, and must carry a rubric of 1 to 3 points. Questions from a model that fail the gate are regenerated once, and any still missing are filled from the static backend.
+Every question passes a programmatic gate before you see it: it must name an identifier that appears in the diff, must not match a list of generic phrases ("what does this change do", "why did you make this change", Big-O, other files, line numbers), must not just ask what something is or does, must not contain its own answer, and must carry a rubric of 1 to 3 points. A model is asked for one spare question in a single request; questions that fail the gate are dropped, and any still missing are filled from the static backend instead of a second request.
 
 ### Backends
 
@@ -101,12 +101,12 @@ Every question passes a programmatic gate before you see it: it must name an ide
 
 | | static | local | cloud |
 |---|---|---|---|
-| Setup | none | install Ollama, `ollama pull qwen2.5-coder:7b` | API key in an env var, opt in during `grasp init` |
-| Privacy | nothing leaves the machine | nothing leaves the machine (talks to `localhost:11434`) | filtered, redacted diff and your answers go to the provider |
+| Setup | none | install Ollama, `ollama pull qwen2.5-coder:7b` | API key in an env var (Groq's is free), opt in during `grasp init` |
+| Privacy | nothing leaves the machine | nothing leaves the machine (talks to `127.0.0.1:11434`) | filtered, redacted diff and your answers go to the provider |
 | Question source | templates filled from facts in the diff (Python `ast`, regex for other languages) | model, then the quality gate, then static top-up | model, then the quality gate, then static top-up |
 | Grading | honor system: a minimal automatic check, then you compare your answer to a checklist and grade yourself | model compares your answer to the rubric | model compares your answer to the rubric |
 | Grading quality | weakest; it trusts you | fair; small models get a rubric so they only compare | best of the three |
-| Latency (measured) | under 0.1 s | qwen2.5-coder 7B on an 8-core CPU with no GPU: 20 to 70 s to generate, about 18 s per graded answer (a GPU should be much faster; not measured) | gpt-4o-mini: 2 to 5 s to generate, about 1.5 s per graded answer |
+| Latency (measured) | under 0.1 s | qwen2.5-coder 7B on an 8-core CPU with no GPU: 20 to 70 s to generate, about 18 s per graded answer (a GPU should be much faster; not measured) | Groq free tier, gpt-oss-20b: 0.6 to 0.75 s to generate, 0.2 to 1.0 s per graded answer (rare queue spikes over 2 s). gpt-4o-mini: 2 to 5 s to generate, about 1.5 s per graded answer |
 
 The static backend looks for: new or changed conditions, removed branches, removed calls, new parameters, changed defaults, new raises and exception handlers, early returns, changed constants and new loops. If it finds nothing concrete (for example, a prose-only change), the commit is allowed and logged.
 
@@ -144,7 +144,7 @@ flowchart LR
     end
     static["static.py<br/><sub>ast + regex facts</sub>"]
     ollama(["Ollama :11434<br/><sub>OpenAI-compatible</sub>"])
-    cloud(["Cloud API<br/><sub>Anthropic or OpenAI-compatible</sub>"])
+    cloud(["Cloud API<br/><sub>Groq, Anthropic or OpenAI-compatible</sub>"])
     cfg[("config.toml")]
     log[("log.jsonl")]
 
@@ -184,7 +184,7 @@ sequenceDiagram
     Hook->>Hook: filter, redact, count meaningful lines
     Hook->>LLM: redacted diff in a delimited block
     LLM-->>Hook: JSON questions with rubrics
-    Hook->>Hook: quality gate, regenerate once, static top-up
+    Hook->>Hook: quality gate, static top-up
     loop each question
         Hook->>Dev: snippet + question
         Dev->>Hook: answer
@@ -201,8 +201,8 @@ Limits and guarantees:
 
 * Fails open. Any internal error, or every backend failing, allows the commit and writes the error to the log.
 * Never more than 3 questions per attempt.
-* Diff budget sent to a model: about 3000 tokens for local and 12000 for cloud (estimated at 4 characters per token, largest files first).
-* Timeouts: 2 s health check for Ollama, 120 s per local request, 30 s per cloud request. Malformed JSON gets one retry; rejected questions get one regeneration.
+* Diff budget sent to a model: about 3000 tokens for local and 12000 for cloud, or 4000 with the Groq preset so a commit stays under the free tier's 8000 tokens per minute (estimated at 4 characters per token, largest files first).
+* Timeouts: 2 s health check for Ollama, 120 s per local request, 30 s per cloud request. Malformed JSON gets one retry; rejected questions are replaced from static, never regenerated.
 * The diff and your answers are wrapped in delimited blocks, closing tags inside them are neutralised, and the model is told to ignore instructions in them. Replies must be JSON and are validated before use.
 * Cloud is never used unless you opt in during `grasp init`, even with `backend = "auto"` and a key in your environment.
 
@@ -254,16 +254,20 @@ On machines with less RAM, use the 3B model and set `model = "qwen2.5-coder:3b"`
 ollama pull qwen2.5-coder:3b
 ```
 
+The default URL uses `127.0.0.1` rather than `localhost`. On Windows, `localhost` tries IPv6 first and added about 2 s to every request in testing. If your config still says `localhost`, change it.
+
 ### Cloud Model (Optional)
 
 Export a key, then run `grasp init` and accept the privacy notice. grasp sends one tiny request to check the key.
 
+The free option is [Groq](https://console.groq.com/keys): no card needed, and the free plan for `openai/gpt-oss-20b` allows 30 requests per minute, 1000 per day, 8000 tokens per minute and 200000 per day. One commit uses one generate request plus one per graded answer.
+
 ```sh
-export ANTHROPIC_API_KEY=your-key
+export GROQ_API_KEY=your-key
 grasp init
 ```
 
-`OPENAI_API_KEY` works the same way. Any other OpenAI-compatible endpoint works by editing `base_url`, `model` and `api_key_env` under `[cloud]`.
+`ANTHROPIC_API_KEY` and `OPENAI_API_KEY` work the same way (paid). If several keys are set, `grasp init` asks which one to use. Any other OpenAI-compatible endpoint works by editing `base_url`, `model` and `api_key_env` under `[cloud]`; set `reasoning_effort` only for models that accept it.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -316,7 +320,7 @@ mode = "normal"         # strict | normal | advisory
 threshold = 15          # minimum meaningful changed lines before asking
 
 [local]
-base_url = "http://localhost:11434/v1"
+base_url = "http://127.0.0.1:11434/v1"
 model = "qwen2.5-coder:7b"
 max_diff_tokens = 3000
 timeout = 120
@@ -328,6 +332,7 @@ model = "claude-haiku-4-5"
 api_key_env = ""        # empty means cloud is off
 max_diff_tokens = 12000
 timeout = 30
+reasoning_effort = ""   # "low" for gpt-oss on Groq; empty means not sent
 ```
 
 A `.graspignore` file in the repo root takes one pattern per line: `docs/` matches a directory, `*.sql` or `scripts/gen_*.py` match files. Lines starting with `#` are comments.
@@ -337,7 +342,7 @@ A `.graspignore` file in the repo root takes one pattern per line: `docs/` match
 <!-- PRIVACY -->
 ## Privacy
 
-* **static and local:** nothing leaves your machine. The local backend only talks to the Ollama URL in your config, which is `localhost` by default.
+* **static and local:** nothing leaves your machine. The local backend only talks to the Ollama URL in your config, which is `127.0.0.1` by default.
 * **cloud:** the filtered, redacted staged diff, the question, its rubric and your redacted answer are sent to the provider you chose. Nothing else is sent: no file list outside the diff, no repo name, no log contents.
 * Redaction is pattern-based. It catches common key formats (AWS, OpenAI-style `sk-`, GitHub, Slack, Google, JWTs), private key blocks, credentials in URLs, `password`/`token`/`secret` assignments and high-entropy quoted strings. It cannot catch every secret. Use `.graspignore` for files that must never be read.
 * The log at `~/.local/share/grasp/log.jsonl` (or `$XDG_DATA_HOME/grasp/log.jsonl`) stays on your machine. It holds timestamps, repo paths, file names, questions, your redacted answers and grades.

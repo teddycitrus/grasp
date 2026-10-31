@@ -14,7 +14,7 @@ DEFAULTS = {
     "mode": "normal",
     "threshold": 15,
     "local": {
-        "base_url": "http://localhost:11434/v1",
+        "base_url": "http://127.0.0.1:11434/v1",
         "model": "qwen2.5-coder:7b",
         "max_diff_tokens": 3000,
         "timeout": 120,
@@ -26,6 +26,7 @@ DEFAULTS = {
         "api_key_env": "",
         "max_diff_tokens": 12000,
         "timeout": 30,
+        "reasoning_effort": "",
     },
 }
 

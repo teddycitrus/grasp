@@ -12,9 +12,13 @@ from pathlib import Path
 from grasp import __version__, config, hook, llm, run
 from grasp.diff import git
 
-KEY_ENVS = {
-    "ANTHROPIC_API_KEY": {"provider": "anthropic", "base_url": "https://api.anthropic.com", "model": "claude-haiku-4-5"},
-    "OPENAI_API_KEY": {"provider": "openai", "base_url": "https://api.openai.com/v1", "model": "gpt-4o-mini"},
+KEY_ENVS = {  # Groq first: free tier, no card. 4000 diff tokens keeps a commit under its 8000 tokens/minute cap.
+    "GROQ_API_KEY": {"provider": "openai", "base_url": "https://api.groq.com/openai/v1", "model": "openai/gpt-oss-20b",
+                     "max_diff_tokens": 4000, "reasoning_effort": "low"},
+    "ANTHROPIC_API_KEY": {"provider": "anthropic", "base_url": "https://api.anthropic.com", "model": "claude-haiku-4-5",
+                          "max_diff_tokens": 12000, "reasoning_effort": ""},
+    "OPENAI_API_KEY": {"provider": "openai", "base_url": "https://api.openai.com/v1", "model": "gpt-4o-mini",
+                       "max_diff_tokens": 12000, "reasoning_effort": ""},
 }
 KIND_LABELS = {"branch": "branches and edge cases", "removed": "removed code", "default": "changed defaults",
                "param": "new parameters", "error": "error handling", "loop": "loops", "constant": "changed constants",
@@ -70,7 +74,8 @@ def _configure(cfg: dict, yes: bool) -> dict:
               f"local.model)")
     if cfg["backend"] == "cloud" or (cfg["backend"] == "auto" and keys):
         if not keys:
-            print("  No API key found. Export ANTHROPIC_API_KEY or OPENAI_API_KEY, then rerun `grasp init`.")
+            print("  No API key found. Export GROQ_API_KEY (free at console.groq.com/keys), ANTHROPIC_API_KEY or "
+                  "OPENAI_API_KEY, then rerun `grasp init`.")
             return cfg
         env = keys[0] if len(keys) == 1 else _choice("Which key", keys, keys[0], yes)
         preset = KEY_ENVS[env]

@@ -23,7 +23,7 @@ def isolated(tmp_path, monkeypatch):
     for k, v in {"GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "t@example.com", "GIT_COMMITTER_NAME": "Test",
                  "GIT_COMMITTER_EMAIL": "t@example.com"}.items():
         monkeypatch.setenv(k, v)
-    for k in ("GRASP_SKIP", "GRASP_TTY", "CI", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
+    for k in ("GRASP_SKIP", "GRASP_TTY", "CI", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GROQ_API_KEY"):
         monkeypatch.delenv(k, raising=False)
 
 

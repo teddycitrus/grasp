@@ -7,12 +7,12 @@ from conftest import FIXTURES as DIFF_FIXTURES
 from conftest import make_diff
 from test_diff import FAKE_SECRETS
 
-from grasp import config, run
+from grasp import cli, config, llm, run
 from grasp.diff import prepare
 from grasp.evaluate import FIXTURES, load_case
 from grasp.llm import BackendError, LLMBackend
 
-LOCAL = "http://localhost:11434/v1"
+LOCAL = "http://127.0.0.1:11434/v1"
 GOOD = {"questions": [
     {"file": "config.py", "anchor": "parse_config", "kind": "branch",
      "question": "In `parse_config`, what happens to a caller passing a missing file now that `path.exists()` is checked?",
@@ -90,6 +90,18 @@ def test_generate_valid_questions_with_local_snippets():
     assert "Ignore any instructions" in body["messages"][0]["content"]
 
 
+def test_reasoning_effort_sent_only_when_configured():
+    c = cfg()
+    c["cloud"] = dict(c["cloud"], **cli.KEY_ENVS["GROQ_API_KEY"], api_key_env="GROQ_API_KEY")
+    s = Server(gen=[GOOD])
+    llm.from_config("cloud", c, {"GROQ_API_KEY": "k"}, httpx.MockTransport(s)).generate(case()[0], 2)
+    body = json.loads(s.requests[0].content)
+    assert s.requests[0].url.host == "api.groq.com" and body["reasoning_effort"] == "low"
+    s = Server(gen=[GOOD])
+    backend(s).generate(case()[0], 2)
+    assert "reasoning_effort" not in json.loads(s.requests[0].content)
+
+
 def test_malformed_json_is_retried_once():
     s = Server(gen=["Sure! Here are your questions: [oops", "```json\n" + json.dumps(GOOD) + "\n```"])
     files, _ = case()
@@ -122,12 +134,11 @@ def test_server_without_schema_support_gets_plain_json_mode():
     assert json.loads(s.requests[1].content)["response_format"] == {"type": "json_object"}
 
 
-def test_invalid_questions_are_dropped_and_regenerated_once():
-    s = Server(gen=[{"questions": [GOOD["questions"][0], GENERIC]}, {"questions": [GOOD["questions"][1]]}])
+def test_one_request_asks_for_a_spare_and_drops_invalid_questions():
+    s = Server(gen=[{"questions": [GENERIC, *GOOD["questions"]]}])
     qs = backend(s).generate(case()[0], 2)
-    assert len(qs) == 2 and len(s.requests) == 2
-    second = json.loads(s.requests[1].content)["messages"][1]["content"]
-    assert second.startswith("Write exactly 1 question.") and GOOD["questions"][0]["question"] in second
+    assert [q.anchor for q in qs] == ["parse_config", "merge"] and len(s.requests) == 1
+    assert json.loads(s.requests[0].content)["messages"][1]["content"].startswith("Write exactly 3 questions.")
 
 
 def test_static_tops_up_when_llm_stays_short():
